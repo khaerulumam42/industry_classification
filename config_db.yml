@@ -1,5 +1,5 @@
-user: your_username
-password: ypur_db_password
-host: your_host
-dbname: your_dbname
-port: port_db
+user: umam
+password: AKuPastiBisa1
+host: localhost
+dbname: scrap
+port: 3306
