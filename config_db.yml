@@ -1,0 +1,5 @@
+user: your_username
+password: ypur_db_password
+host: your_host
+dbname: your_dbname
+port: port_db
