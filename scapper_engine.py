@@ -3,6 +3,7 @@ import re
 import yaml
 import sqlalchemy
 import mysql.connector
+import pandas as pd
 
 from bs4 import BeautifulSoup
 from mysql.connector import Error
@@ -17,23 +18,26 @@ connection = 'mysql://{0}:{1}@{2}:{3}/{4}'.format(config["user"], \
 conn = sqlalchemy.create_engine(connection)
 
 # create table if not exists
-try:
-    create_table_jobstreet = """CREATE TABLE IF NOT EXISTS jobstreet ( 
-                             job_id int(11) NOT NULL,
-                             url_logo varchar(250),
-                             company_name varchar(250),
-                             location varchar(250),
-                             position varchar(250),
-                             industry varchar(250),
-                             min_company_size int(11),
-                             max_company_size int(11),
-                             job_desc varchar(250),
-                             posted DATE NOT NULL,
-                             PRIMARY KEY (job_id)) """
+# UNFORTUNATELY still getting error while connecting db, so I will save data
+# into csv file
 
-    conn.execute(create_table_jobstreet) #create db
-Exception as e:
-    print("error while create db ", e)
+# try:
+#     create_table_jobstreet = """CREATE TABLE IF NOT EXISTS jobstreet ( 
+#                                 job_id int(11) NOT NULL,
+#                                 url_logo varchar(250),
+#                                 company_name varchar(250),
+#                                 location varchar(250),
+#                                 position varchar(250),
+#                                 industry varchar(250),
+#                                 min_company_size int(11),
+#                                 max_company_size int(11),
+#                                 job_desc varchar(250),
+#                                 posted DATE NOT NULL,
+#                                 PRIMARY KEY (job_id)) """
+
+#     conn.execute(create_table_jobstreet) #create db
+# except sqlalchemy.exc.OperationalError as e:
+#     print("error while create db ", e)
 
 def update_data_db(df):
     pass
@@ -69,8 +73,8 @@ def process_job_desc(soup):
     return job_desc
 
 def process_date_posted(soup):
-    if job_soup.find('p', {'id':'posting_date'}):
-        date_str = job_soup.find('p', {'id':'posting_date'}).text.split(': ')[-1]
+    if soup.find('p', {'id':'posting_date'}):
+        date_str = soup.find('p', {'id':'posting_date'}).text.split(': ')[-1]
     else:
         date_str = None
     # format into datetime format
@@ -86,6 +90,12 @@ def job_page(position, job_id):
     # visit job details webpage
     route = position.lower().replace(" ","-")+"-"+str(job_id)
     url = 'https://www.jobstreet.co.id/id/job/{}'.format(route)
+    headers = {'User-Agent':'Mozilla/5.0 (Windows NT 10.0; \
+        Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) \
+        Chrome/66.0.3359.139 Safari/537.36'}
+
+    pay_load = {'key':'','area':1,'option':1,'pg':None,'classified':1,\
+        'src':16,'srcr':12}
     job_webpage = requests.get(url, headers=headers, params=pay_load)
     job_soup = BeautifulSoup(job_webpage.text, 'html')
     # process to min and max size
@@ -129,6 +139,7 @@ def process_position(detail_job):
     return pos
 
 def process_industry(detail_job):
+    industry_title = detail_job.find('a',{'class':'text-muted'})
     if detail_job.find('a',{'class':'text-muted'}):
         industry = re.search(r'Lowongan (.*?) di', industry_title["title"]).group(1)
     else:
@@ -217,3 +228,7 @@ def main():
                                 "posted":date_posted_all})
         
     return df
+
+if __name__ == "__main__":
+    df = main()
+    df.to_csv("examples.csv")
